@@ -25,7 +25,7 @@ export DOCKER_HOST=unix:///run/user/$(id -u)/docker.sock
 
 *Modify RUNNER_VERSION, RUNNER_URL, CHECKSUM & RUNNER_TOKEN in accordance with your new self hosted github [action runner](https://github.com/error-try-again/QRGen-upptime/settings/actions/runners/new)*
 ```sh
-cat <<EOF
+cat << EOF > Dockerfile
 FROM debian:bullseye-slim
 
 # Define arguments for versions and other variables
