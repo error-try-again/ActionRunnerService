@@ -17,14 +17,6 @@ machinectl shell docker-primary@
 
 ### Step 1.5, Ensure the docker daemon is accessible from inside the user space
 ```bash
-# Set the docker host to local users uuid 
-export DOCKER_HOST=unix:///run/user/$(id -u)/docker.sock
-```
-
-### Step 2. Copy this script, modify the relevant lines
-
-*Modify RUNNER_VERSION, RUNNER_URL, CHECKSUM & RUNNER_TOKEN in accordance with your new self hosted github [action runner](https://github.com/error-try-again/QRGen-upptime/settings/actions/runners/new)*
-```
 cat << 'EOF' > Dockerfile
 FROM debian:bullseye-slim
 
@@ -40,7 +32,7 @@ ARG DISABLE_UPDATE
 ARG NODE_VERSION=20.8.0
 
 # Fail the build if the CHECKSUM is not provided
-RUN if [ -z "\$CHECKSUM" ]; then echo "CHECKSUM argument not provided" && exit 1; fi
+RUN if [ -z "$CHECKSUM" ]; then echo "CHECKSUM argument not provided" && exit 1; fi
 
 # Install necessary packages (curl, tar, libicu, git, ca-certificates)
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -52,38 +44,33 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Create a non-root user and switch to it
-RUN useradd -m runner
-
-# Set up NVM environment variables for the 'runner' user
-ENV NVM_DIR="/home/runner/.nvm"
-ENV npm_config_cache="/home/runner/.npm"
+RUN useradd -m -s /bin/bash runner
 
 USER runner
 WORKDIR /home/runner
 
-# Install NVM, Node.js, and update npm
+# Install NVM, Node.js, and update npm in a single RUN command
 RUN curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.1/install.sh | bash \
-    && . $NVM_DIR/nvm.sh \
+    && export NVM_DIR="$HOME/.nvm" \
+    && [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh" \
+    && [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion" \
     && nvm install $NODE_VERSION \
     && nvm use $NODE_VERSION \
     && nvm alias default $NODE_VERSION \
     && npm install -g npm@latest
 
-# Create actions-runner directory and set permissions
-WORKDIR /actions-runner
-RUN chmod 755 /actions-runner
+# Set PATH explicitly for Node (assuming the default NVM install path)
+ENV PATH="/home/runner/.nvm/versions/node/v$NODE_VERSION/bin:$PATH"
 
 # Download, verify, and extract the GitHub Actions runner
 RUN curl -o actions-runner-linux-x64-$RUNNER_VERSION.tar.gz -L https://github.com/actions/runner/releases/download/v$RUNNER_VERSION/actions-runner-linux-x64-$RUNNER_VERSION.tar.gz \
     && echo "$CHECKSUM actions-runner-linux-x64-$RUNNER_VERSION.tar.gz" | sha256sum -c \
     && tar xzf actions-runner-linux-x64-$RUNNER_VERSION.tar.gz \
-    && rm actions-runner-linux-x64-$RUNNER_VERSION.tar.gz
-
-# Ensure the script is executable
-RUN chmod +x ./config.sh
+    && rm actions-runner-linux-x64-$RUNNER_VERSION.tar.gz \
+    && chmod +x ./config.sh
 
 # Configure the runner with the provided script line
-RUN echo ./config.sh --unattended --url \$RUNNER_URL --token \$RUNNER_TOKEN --name \$RUNNER_NAME ${LABELS:+--labels \$LABELS} ${RUNNER_GROUP:+--runnergroup "\$RUNNER_GROUP"} ${DISABLE_UPDATE:+--disableupdate} | bash
+RUN ./config.sh --unattended --url $RUNNER_URL --token $RUNNER_TOKEN --name $RUNNER_NAME ${LABELS:+--labels $LABELS} ${RUNNER_GROUP:+--runnergroup "$RUNNER_GROUP"} ${DISABLE_UPDATE:+--disableupdate}
 
 # Set the entrypoint to the run script
 ENTRYPOINT ["./run.sh"]
@@ -92,11 +79,11 @@ EOF
 
 ```sh
 docker build \
-    --build-arg RUNNER_VERSION="2.311.0" \
-    --build-arg CHECKSUM="29fc8cf2dab4c195bb147384e7e2c94cfd4d4022c793b346a6175435265aa278" \
-    --build-arg RUNNER_URL="https://github.com/error-try-again/QRGen-upptime" \
-    --build-arg RUNNER_TOKEN="AEWF6OODLPBCXXPDL5QEVQDFNSJ5U" \
-    --build-arg RUNNER_NAME="void" \
+    --build-arg RUNNER_VERSION="<version>" \
+    --build-arg CHECKSUM="mychecksum" \
+    --build-arg RUNNER_URL="https://github.com/<user>/<repo>" \
+    --build-arg RUNNER_TOKEN="myrunnertoken" \
+    --build-arg RUNNER_NAME="<name>" \
     --build-arg LABELS="self-hosted" \
     --build-arg RUNNER_GROUP="" \
     --build-arg DISABLE_UPDATE="true" \
