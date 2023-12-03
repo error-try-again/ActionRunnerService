@@ -24,6 +24,7 @@ export DOCKER_HOST=unix:///run/user/$(id -u)/docker.sock
 ### Step 2. Copy this script, modify the relevant lines
 
 *Modify RUNNER_VERSION, RUNNER_URL, CHECKSUM & RUNNER_TOKEN in accordance with your new self hosted github [action runner](https://github.com/error-try-again/QRGen-upptime/settings/actions/runners/new)*
+```
 cat << 'EOF' > Dockerfile
 FROM debian:bullseye-slim
 
@@ -86,7 +87,6 @@ RUN echo ./config.sh --unattended --url \$RUNNER_URL --token \$RUNNER_TOKEN --na
 
 # Set the entrypoint to the run script
 ENTRYPOINT ["./run.sh"]
-EOF
 EOF
 ```
 
