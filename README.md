@@ -10,13 +10,13 @@ Preconfigured Docker, or Docker-Rootless environment - and users - here I use th
 ## Usage (Docker Rootless)
 
 ### Step 1. Enter the user space using a fresh shell using machinectl  
-```sh
+```bash
 # Login to a non-root user
 machinectl shell docker-primary@
 ```
 
 ### Step 1.5, Ensure the docker daemon is accessible from inside the user space
-```sh
+```bash
 # Set the docker host to local users uuid 
 export DOCKER_HOST=unix:///run/user/$(id -u)/docker.sock
 ```
@@ -24,7 +24,7 @@ export DOCKER_HOST=unix:///run/user/$(id -u)/docker.sock
 ### Step 2. Copy this script, modify the relevant lines
 
 *Modify RUNNER_VERSION, RUNNER_URL, CHECKSUM & RUNNER_TOKEN in accordance with your new self hosted github [action runner](https://github.com/error-try-again/QRGen-upptime/settings/actions/runners/new)*
-```sh
+```bash
 cat << 'EOF' > Dockerfile
 FROM debian:bullseye-slim
 
@@ -77,7 +77,7 @@ EOF
 ```
 
 ## Step 3. Build & Run
-```sh
+```bash
 docker build \
     --build-arg RUNNER_VERSION="2.311.0" \
     --build-arg CHECKSUM="29fc8cf2dab4c195bb147384e7e2c94cfd4d4022c793b346a6175435265aa278" \
@@ -90,7 +90,7 @@ docker build \
     -t self-hosted-runner .
 ```
 
-```sh 
+```bash
 docker run --detach self-hosted-runner
 ```
 
