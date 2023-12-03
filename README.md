@@ -24,7 +24,6 @@ export DOCKER_HOST=unix:///run/user/$(id -u)/docker.sock
 ### Step 2. Copy this script, modify the relevant lines
 
 *Modify RUNNER_VERSION, RUNNER_URL, CHECKSUM & RUNNER_TOKEN in accordance with your new self hosted github [action runner](https://github.com/error-try-again/QRGen-upptime/settings/actions/runners/new)*
-```bash
 cat << 'EOF' > Dockerfile
 FROM debian:bullseye-slim
 
@@ -37,23 +36,37 @@ ARG RUNNER_NAME
 ARG LABELS
 ARG RUNNER_GROUP
 ARG DISABLE_UPDATE
+ARG NODE_VERSION=20.8.0
 
 # Fail the build if the CHECKSUM is not provided
 RUN if [ -z "\$CHECKSUM" ]; then echo "CHECKSUM argument not provided" && exit 1; fi
 
-# Install necessary packages (curl, tar, and dependencies for .NET Core)
+# Install necessary packages (curl, tar, libicu, git, ca-certificates)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     tar \
     libicu67 \
-    nodejs \
-    npm \
+    git \
+    ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
 # Create a non-root user and switch to it
 RUN useradd -m runner
+
+# Set up NVM environment variables for the 'runner' user
+ENV NVM_DIR="/home/runner/.nvm"
+ENV npm_config_cache="/home/runner/.npm"
+
 USER runner
 WORKDIR /home/runner
+
+# Install NVM, Node.js, and update npm
+RUN curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.1/install.sh | bash \
+    && . $NVM_DIR/nvm.sh \
+    && nvm install $NODE_VERSION \
+    && nvm use $NODE_VERSION \
+    && nvm alias default $NODE_VERSION \
+    && npm install -g npm@latest
 
 # Create actions-runner directory and set permissions
 WORKDIR /actions-runner
@@ -74,25 +87,23 @@ RUN echo ./config.sh --unattended --url \$RUNNER_URL --token \$RUNNER_TOKEN --na
 # Set the entrypoint to the run script
 ENTRYPOINT ["./run.sh"]
 EOF
+EOF
 ```
 
-## Step 3. Build & Run
-```bash
+```sh
 docker build \
     --build-arg RUNNER_VERSION="2.311.0" \
     --build-arg CHECKSUM="29fc8cf2dab4c195bb147384e7e2c94cfd4d4022c793b346a6175435265aa278" \
     --build-arg RUNNER_URL="https://github.com/error-try-again/QRGen-upptime" \
-    --build-arg RUNNER_TOKEN="AEWF6OPOREYY5BXDMCA6BHLFNSD6C" \
+    --build-arg RUNNER_TOKEN="AEWF6OODLPBCXXPDL5QEVQDFNSJ5U" \
     --build-arg RUNNER_NAME="void" \
     --build-arg LABELS="self-hosted" \
     --build-arg RUNNER_GROUP="" \
     --build-arg DISABLE_UPDATE="true" \
-    -t self-hosted-runner .
-```
+    -t self-hosted-runner . \
+    && docker run --detach self-hosted-runner
+```    
 
-```bash
-docker run --detach self-hosted-runner
-```
 
 ## Step 4. Profit
 ![image](https://github.com/error-try-again/ActionRunnerService/assets/19685177/33f9e538-f6ee-4458-8f61-88e3776fd560)
