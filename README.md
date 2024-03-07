@@ -90,9 +90,14 @@ docker build \
     --build-arg RUNNER_GROUP="" \
     --build-arg DISABLE_UPDATE="true" \
     -t self-hosted-runner . \
+    --no-cache \
     && docker run --detach \
     self-hosted-runner \
-    --restart always
+    --name self-hosted-runner \
+    --restart always \
+    --cap-drop=all \
+    --memory-swap="512m" \
+    --memory="512m"
 ```
 
 ## Step 4. Profit
